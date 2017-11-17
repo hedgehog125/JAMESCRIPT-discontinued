@@ -714,25 +714,27 @@ function create() {
 		me.JSONID = i
 
 		me.vars = {}
-		if (! (c["scripts"]["main"] === undefined || c["scripts"]["main"] === null)) {
-			if (c["scripts"]["main"].length > 0) {
-				var a = 0
-				for (a in c["scripts"]["main"]) {
-					if (scriptTimes[c["scripts"]["main"][a]["stateToRun"].toString()] === undefined) {
-						scriptTimes[c["scripts"]["main"][a]["stateToRun"].toString()] = []
+		if (c["scripts"] != undefined) {
+			if (! (c["scripts"]["main"] === undefined || c["scripts"]["main"] === null)) {
+				if (c["scripts"]["main"].length > 0) {
+					var a = 0
+					for (a in c["scripts"]["main"]) {
+						if (scriptTimes[c["scripts"]["main"][a]["stateToRun"].toString()] === undefined) {
+							scriptTimes[c["scripts"]["main"][a]["stateToRun"].toString()] = []
+						}
+						scriptTimes[c["scripts"]["main"][a]["stateToRun"].toString()][scriptTimes[c["scripts"]["main"][a]["stateToRun"].toString()].length] = [i, a]
 					}
-					scriptTimes[c["scripts"]["main"][a]["stateToRun"].toString()][scriptTimes[c["scripts"]["main"][a]["stateToRun"].toString()].length] = [i, a]
 				}
 			}
-		}
-		if (! (c["scripts"]["init"] === undefined || c["scripts"]["init"] === null)) {
-			if (c["scripts"]["init"].length > 0) {
-				var a = 0
-				for (a in c["scripts"]["init"]) {
-					if (resetScriptTimes[c["scripts"]["init"][a]["stateToRun"].toString()] === undefined) {
-						resetScriptTimes[c["scripts"]["init"][a]["stateToRun"].toString()] = []
+			if (! (c["scripts"]["init"] === undefined || c["scripts"]["init"] === null)) {
+				if (c["scripts"]["init"].length > 0) {
+					var a = 0
+					for (a in c["scripts"]["init"]) {
+						if (resetScriptTimes[c["scripts"]["init"][a]["stateToRun"].toString()] === undefined) {
+							resetScriptTimes[c["scripts"]["init"][a]["stateToRun"].toString()] = []
+						}
+						resetScriptTimes[c["scripts"]["init"][a]["stateToRun"].toString()][resetScriptTimes[c["scripts"]["init"][a]["stateToRun"].toString()].length] = [i, a]
 					}
-					resetScriptTimes[c["scripts"]["init"][a]["stateToRun"].toString()][resetScriptTimes[c["scripts"]["init"][a]["stateToRun"].toString()].length] = [i, a]
 				}
 			}
 		}
