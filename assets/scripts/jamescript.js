@@ -145,6 +145,10 @@ if (getEl("game") == null) {
 	throw new Error("JAMESCRIPT: Fatal Error: Unable to find GameFrame: Element with the id of 'game' doesn't exist.")
 }
 
+if (! ("doubleScriptsAllowed" in window) {
+	doubleScriptsAllowed = true
+}
+
 // Check the JSON...
 if (! ("scripts" in Assets)) {
 	throw new Error("JAMESCRIPT: Fatal Error: 'scripts' does not exist in the JSON.")
@@ -337,6 +341,10 @@ LoadingState = {
 							if (currentFPS <= 31) {
 								console.warn("JAMESCRIPT: Your browser seems to be running the main script at half the speed it should. This will mean the game won't work properly. \n JAMESCRIPT will still work, but it may behave unexpectedly.")
 								doubleScripts = true
+								if (! doubleScriptsAllowed) {
+									alert("JAMESCRIPT: Your browser seems to be running the main script at half the speed it should. This will mean the game won't work properly.")
+									GameFrame.parentNode.removeChild(GameFrame)
+								}
 							}
 						}, 2000)
 						clearInterval(wait)
