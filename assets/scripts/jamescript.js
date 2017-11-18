@@ -347,7 +347,6 @@ LoadingState = {
 				}, 30)
 			}, 500)
 		}, Game)
-		Game.stage.backgroundColor = "#000000"
 		loadingText = Game.add.text(Game.world.centerX, Game.world.centerY, "Loading... 0%", {
 			"font": "50px Arial",
 			"fill": "#FFFFFF",
@@ -393,6 +392,9 @@ function deleteCloneByName(name) {
 }
 
 function setup() {
+	if ("prescript" in Assets) {
+		Assets["prescript"]()
+	}
 	Game.state.add("Load", LoadingState)
 	Game.state.add("GameState", GameState)
 	Game.state.start("Load")
