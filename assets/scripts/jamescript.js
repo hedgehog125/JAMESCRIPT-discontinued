@@ -145,7 +145,7 @@ if (getEl("game") == null) {
 	throw new Error("JAMESCRIPT: Fatal Error: Unable to find GameFrame: Element with the id of 'game' doesn't exist.")
 }
 
-if (! ("doubleScriptsAllowed" in window) {
+if (! ("doubleScriptsAllowed" in window)) {
 	doubleScriptsAllowed = true
 }
 
