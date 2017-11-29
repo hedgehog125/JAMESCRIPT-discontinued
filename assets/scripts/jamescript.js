@@ -247,7 +247,6 @@ function testRenderers() {
 		},
 		"update": function() {
 			if (testTick == 40) {
-				alert(avgFPS.value)
 				console.log("JAMESCRIPT: AUTO achieved " + avgFPS.value + " FPS.")
 				if (useCanvas) {
 					console.log("JAMESCRIPT: 'useCanvas' is true. Switching to canvas mode...")
