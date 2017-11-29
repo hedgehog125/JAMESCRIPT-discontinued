@@ -1,5 +1,5 @@
 // Under creative commons licence see: https://creativecommons.org/
-// Github repo: -Insert here-
+// Github repo: https://github.com/hedgehog125/JAMESCRIPT
 
 // Tinylib
 
@@ -236,19 +236,24 @@ function testRenderers() {
 			var i = 0
 			while (i < 600) {
 				var sprite = Game.add.sprite(Game.rnd.integerInRange(0, Game.width), Game.rnd.integerInRange(0, Game.height), "test")
-				sprite.width = 1
-				sprite.height = 1
+				sprite.width = Game.width
+				sprite.height = Game.height
 				i++
 			}
+			avgFPS = {}
+			avgFPS.total = 0
+			avgFPS.samples = 0
+			avgFPS.value = 0
 		},
 		"update": function() {
-			if (testTick == 30) {
-				console.log("JAMESCRIPT: AUTO achieved " + currentFPS + " FPS.")
+			if (testTick == 40) {
+				alert(avgFPS.value)
+				console.log("JAMESCRIPT: AUTO achieved " + avgFPS.value + " FPS.")
 				if (useCanvas) {
 					console.log("JAMESCRIPT: 'useCanvas' is true. Switching to canvas mode...")
 				}
 				else {
-					if (currentFPS < 50) {
+					if (avgFPS.value < 50) {
 						mode = Phaser.CANVAS
 						console.log("JAMESCRIPT: FPS is low, WebGL is slow. Switching to canvas mode...")
 					}
@@ -271,6 +276,10 @@ function testRenderers() {
 			}
 			testTick++
 			currentFPS = fpsCalc.getFPS()
+
+			avgFPS.samples++
+			avgFPS.total = avgFPS.total + currentFPS
+			avgFPS.value = Math.round(avgFPS.total / avgFPS.samples)
 		}
 	})
 	Game.state.start("Test")
