@@ -234,7 +234,7 @@ function testRenderers() {
 		},
 		"create": function() {
 			var i = 0
-			while (i < 500) {
+			while (i < 600) {
 				var sprite = Game.add.sprite(Game.rnd.integerInRange(0, Game.width), Game.rnd.integerInRange(0, Game.height), "test")
 				sprite.width = 1
 				sprite.height = 1
