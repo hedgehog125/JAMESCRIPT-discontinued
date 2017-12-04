@@ -1109,7 +1109,7 @@ colision = {
 			while (i < data.data.length) {
 				if (data.data[i] == 192) {
 					if (criteria != undefined) {
-						if (criteria(sprite)) {
+						if (criteria(spr)) {
 							colision.lastColision.time = (new Date() - start) / 1000
 							return true
 						}
