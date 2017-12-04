@@ -234,7 +234,7 @@ function testRenderers() {
 		},
 		"create": function() {
 			var i = 0
-			while (i < 600) {
+			while (i < 300) {
 				var sprite = Game.add.sprite(Game.rnd.integerInRange(0, Game.width), Game.rnd.integerInRange(0, Game.height), "test")
 				sprite.width = Game.width
 				sprite.height = Game.height
@@ -246,7 +246,7 @@ function testRenderers() {
 			avgFPS.value = 0
 		},
 		"update": function() {
-			if (testTick == 40) {
+			if (testTick == 100) {
 				console.log("JAMESCRIPT: AUTO achieved " + avgFPS.value + " FPS.")
 				if (useCanvas) {
 					console.log("JAMESCRIPT: 'useCanvas' is true. Switching to canvas mode...")
@@ -301,6 +301,7 @@ touchscreen = window.ontouchstart !== undefined
 functionForClone = null
 autoStart = true
 doubleScripts = false
+myID = null
 
 currentFade = {
 	"active": false,
@@ -481,7 +482,7 @@ function beginFade(speed, newState, stoptime) {
 }
 
 function move(dis) {
-	var rad = Game.math.radToDeg(me.angle)
+	var rad = Game.math.degToRad(me.angle)
 	me.x = me.x + Math.cos(rad) * dis
 	me.y = me.y + Math.sin(rad) * dis
 }
@@ -627,55 +628,69 @@ function enableTouching() {
 	me.body.immovable = true
 }
 
-function touchingSprite(sprite, criteria, expand) {
-	if (expand) {
-		var dimensions = [[me.body.width, me.body.height], [Sprites[sprite].body.width, Sprites[sprite].body.height]]
+function touchingSprite(sprite, criteria, expand, md) {
+	if (md == undefined) {
+		var mode = "touch"
+	}
+	else {
+		var mode = md
+	}
+
+	if (expand || mode == "touch") {
+		var dimensions = [
+			[me.body.width / me.scale.x, me.body.height / me.scale.y, me.body.offset.x, me.body.offset.y],
+			[Sprites[sprite].body.width / Sprites[sprite].scale.x, Sprites[sprite].body.height / Sprites[sprite].scale.y, Sprites[sprite].body.offset.x, Sprites[sprite].body.offset.y]
+		]
 
 		var size = Math.max(me.body.width, me.body.height)
-
-		me.body.setSize(size, size)
-
+		if (mode == "touch") {
+			me.body.setSize((size + 2) / me.scale.x, (size + 2) / me.scale.y, me.body.offset.x - 1, me.body.offset.y - 1)
+		}
+		else {
+			me.body.setSize(size / me.scale.x, size / me.scale.y)
+		}
 		var size = Math.max(Sprites[sprite].body.width, Sprites[sprite].body.height)
-
-		Sprites[sprite].body.setSize(size, size)
+		if (mode == "touch") {
+			Sprites[sprite].body.setSize((size + 2) / Sprites[sprite].scale.x, (size + 2) / Sprites[sprite].scale.y, Sprites[sprite].body.offset.x - 1, Sprites[sprite].body.offset.y - 1)
+		}
+		else {
+			Sprites[sprite].body.setSize(size / Sprites[sprite].scale.x, size / Sprites[sprite].scale.y)
+		}
 	}
 	if (criteria != undefined) {
 		if (Game.physics.arcade.collide(Sprites[sprite], me, null, null, Game)) {
-			if (expand) { // Return the hitbox back to it's normal size.
-				me.body.setSize(dimensions[0][0], dimensions[0][1])
-
-				Sprites[sprite].body.setSize(dimensions[1][0], dimensions[1][1])
+			if (expand || mode == "touch") { // Return the hitbox back to it's normal size.
+				me.body.setSize(dimensions[0][0], dimensions[0][1], dimensions[0][2], dimensions[0][3])
+				Sprites[sprite].body.setSize(dimensions[1][0], dimensions[1][1], dimensions[0][2], dimensions[0][3])
 			}
 			if (criteria(Sprites[sprite])) {
 				return true
 			}
 		}
-		if (expand) { // Return the hitbox back to it's normal size.
-			me.body.setSize(dimensions[0][0], dimensions[0][1])
-
-			Sprites[sprite].body.setSize(dimensions[1][0], dimensions[1][1])
+		if (expand || mode == "touch") { // Return the hitbox back to it's normal size.
+			me.body.setSize(dimensions[0][0], dimensions[0][1], dimensions[0][2], dimensions[0][3])
+			Sprites[sprite].body.setSize(dimensions[1][0], dimensions[1][1], dimensions[0][2], dimensions[0][3])
 		}
 		return false
 	}
 	else {
 		var ret = Game.physics.arcade.collide(Sprites[sprite], me, null, null, Game)
-		if (expand) { // Return the hitbox back to it's normal size.
-			me.body.setSize(dimensions[0][0], dimensions[0][1])
-
-			Sprites[sprite].body.setSize(dimensions[1][0], dimensions[1][1])
+		if (expand || mode == "touch") { // Return the hitbox back to it's normal size.
+			me.body.setSize(dimensions[0][0], dimensions[0][1], dimensions[0][2], dimensions[0][3])
+			Sprites[sprite].body.setSize(dimensions[1][0], dimensions[1][1], dimensions[0][2], dimensions[0][3])
 		}
 		return ret
 	}
 }
 
-function touchingClones(sprite, criteria) {
+function touchingClones(sprite, criteria, expand, mode) {
 	var i = 0
 	touchInfo = ""
 	for (i in spriteCloneIds[sprite]) {
 		if (spriteCloneIds[sprite][i] != undefined) {
 			if (Sprites[spriteCloneIds[sprite][i]] != undefined) {
 				if (sprite != me.cloneOf | i != me.cloneID) {
-					if (touchingSprite(spriteCloneIds[sprite][i], criteria)) {
+					if (touchingSprite(spriteCloneIds[sprite][i], criteria, expand, mode)) {
 						touchInfo = spriteCloneIds[sprite][i]
 						return true
 					}
@@ -981,7 +996,7 @@ colision = {
 				data.data[i] = 255
 			}
 			else {
-				data.data[i + 3] = 255
+				data.data[i + 3] = 0
 			}
 			var i = i + 4
 		}
@@ -992,9 +1007,21 @@ colision = {
 	"lastColision": {
 		"time": 0
 	},
-	"touchingSprite": function(sprite, criteria) {
+	"touchingSprite": function(sprite, criteria, res, md) {
+		if (md == undefined) {
+			var mode = "touch"
+		}
+		else {
+			var mode = md
+		}
+		if (res == undefined) {
+			var resolution = 1
+		}
+		else {
+			var resolution = res
+		}
 		var start = new Date()
-		if (touchingSprite(sprite, undefined, true)) { // Test!
+		if (touchingSprite(sprite, undefined, true, mode)) { // Test!
 			var myscan = colision.scans[me.key]
 			var otherscan = colision.scans[me.key]
 			var ctx = colision.ctx
@@ -1002,20 +1029,35 @@ colision = {
 
 			var spr = Sprites[sprite]
 
-			canvas.width = Game.width
-			canvas.height = Game.height
+			canvas.width = Game.width / resolution
+			canvas.height = Game.height / resolution
 			ctx.clearRect(0, 0, canvas.width, canvas.height)
+
+			var scaleX = function(x, resolution) {
+				return (x / Game.width) * (Game.width / resolution)
+			}
+			var scaleY = function(y, resolution) {
+				return (y / Game.height) * (Game.height / resolution)
+			}
 
 			// Draw the two images
 
 			// https://stackoverflow.com/questions/3793397/html5-canvas-drawimage-with-at-an-angle
-			var x = me.x
-			var y = me.y
-			var width = me.width
-			var height = me.height
+			if (mode == "touch") {
+				var x = scaleX((me.x - (me.width * me.anchor.x)) + (me.width / 2), resolution) - 1 // Get its centred x)
+				var y = scaleY((me.y - (me.height * me.anchor.y)) + (me.height / 2), resolution) - 1 // Get its centred x
+				var width = scaleX(me.width, resolution) + 2
+				var height = scaleY(me.height, resolution) + 2
+			}
+			else {
+				var x = scaleX((me.x - (me.width * me.anchor.x)) + (me.width / 2), resolution) // Get its centred x)
+				var y = scaleY((me.y - (me.height * me.anchor.y)) + (me.height / 2), resolution) // Get its centred x
+				var width = scaleX(me.width, resolution)
+				var height = scaleY(me.height, resolution)
+			}
 			var angleInRadians = Game.math.degToRad(me.rotation)
 
-			ctx.globalAlpha = 1
+			ctx.globalAlpha = 0.5
 
 			if (me.rotation != 0) {
 				ctx.save()
@@ -1027,20 +1069,28 @@ colision = {
 				ctx.restore()
 			}
 			else {
-				ctx.drawImage(colision.scans[me.key], -width / 2, -height / 2, width, height)
+				ctx.drawImage(colision.scans[me.key], x - (width / 2), y - (height / 2), width, height)
 			}
 
 			// Draw the other image...
 
-			var x = sprite.x
-			var y = sprite.y
-			var width = sprite.width
-			var height = sprite.height
+			if (mode == "touch") {
+				var x = scaleX((spr.x - (spr.width * spr.anchor.x)) + (spr.width / 2), resolution) - 1 // Get its centred x
+				var y = scaleY((spr.y - (spr.height * spr.anchor.y)) + (spr.height / 2), resolution) - 1 // Get its centred y
+				var width = scaleX(spr.width, resolution) + 2
+				var height = scaleY(spr.height, resolution) + 2
+			}
+			else {
+				var x = scaleX((spr.x - (spr.width * spr.anchor.x)) + (spr.width / 2), resolution) // Get its centred x
+				var y = scaleY((spr.y - (spr.height * spr.anchor.y)) + (spr.height / 2), resolution) // Get its centred y
+				var width = scaleX(spr.width, resolution)
+				var height = scaleY(spr.height, resolution)
+			}
 			var angleInRadians = Game.math.degToRad(spr.rotation)
 
 			ctx.globalAlpha = 0.5
 
-			if (sprite.rotation != 0) {
+			if (spr.rotation != 0) {
 				ctx.save()
 				ctx.translate(x, y)
 				ctx.rotate(angleInRadians)
@@ -1050,26 +1100,50 @@ colision = {
 				ctx.restore()
 			}
 			else {
-				ctx.drawImage(image, -width / 2, -height / 2, width, height)
+				ctx.drawImage(colision.scans[spr.key], x - (width / 2), y - (height / 2), width, height)
 			}
 
 			var data = ctx.getImageData(0, 0, canvas.width, canvas.height)
 
-			if (data.data.hasOwnProperty(128)) {
-				if (criteria != undefined) {
-					if (criteria(sprite)) {
+			var i = 3
+			while (i < data.data.length) {
+				if (data.data[i] == 192) {
+					if (criteria != undefined) {
+						if (criteria(sprite)) {
+							colision.lastColision.time = (new Date() - start) / 1000
+							return true
+						}
+					}
+					else {
 						colision.lastColision.time = (new Date() - start) / 1000
 						return true
 					}
 				}
-				else {
-					colision.lastColision.time = (new Date() - start) / 1000
-					return true
+				i = i + 4
+			}
+		}
+
+		colision.lastColision.time = (new Date() - start) / 1000
+		return false
+	},
+	"touchingClones": function(sprite, criteria, res, mode) {
+		var i = 0
+		colision.touchInfo = ""
+		for (i in spriteCloneIds[sprite]) {
+			if (spriteCloneIds[sprite][i] != undefined) {
+				if (Sprites[spriteCloneIds[sprite][i]] != undefined) {
+					if (sprite != me.cloneOf | i != me.cloneID) {
+						if (colision.touchingSprite(spriteCloneIds[sprite][i], criteria, res, mode)) {
+							touchInfo = spriteCloneIds[sprite][i]
+							return true
+						}
+					}
 				}
 			}
 		}
-		colision.lastColision.time = (new Date() - start) / 1000
 		return false
-	}
+	},
+	"touchInfo": null
 }
 colision.ctx = colision.canvas.getContext("2d")
+colision.ctx.imageSmoothingEnabled = false
