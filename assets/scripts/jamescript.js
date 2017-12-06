@@ -506,22 +506,40 @@ function brightness(effect) {
 
 
 function getCentreX(spriteID) {
+	if (spriteID == undefined) {
+		return (me.x - (me.anchor.x * me.width)) + (me.width / 2)
+	}
 	return (Sprites[spriteID].x - (Sprites[spriteID].anchor.x * Sprites[spriteID].width)) + (Sprites[spriteID].width / 2)
 }
 function getLeftX(spriteID) {
+	if (spriteID == undefined) {
+		return me.x - (me.anchor.x * me.width)
+	}
 	return Sprites[spriteID].x - (Sprites[spriteID].anchor.x * Sprites[spriteID].width)
 }
 function getRightX(spriteID) {
+	if (spriteID == undefined) {
+		return (me.x - (me.anchor.x * me.width)) + me.width
+	}
 	return (Sprites[spriteID].x - (Sprites[spriteID].anchor.x * Sprites[spriteID].width)) + Sprites[spriteID].width
 }
 
 function getCentreY(spriteID) {
+	if (spriteID == undefined) {
+		return (me.y - (me.anchor.y * me.height)) + (me.height / 2)
+	}
 	return (Sprites[spriteID].y - (Sprites[spriteID].anchor.y * Sprites[spriteID].height)) + (Sprites[spriteID].height / 2)
 }
 function getTopY(spriteID) {
+	if (spriteID == undefined) {
+		return me.y - (me.anchor.y * me.height)
+	}
 	return Sprites[spriteID].y - (Sprites[spriteID].anchor.y * Sprites[spriteID].height)
 }
 function getBottomY(spriteID) {
+	if (spriteID == undefined) {
+		return (me.y - (me.anchor.y * me.height)) + me.height
+	}
 	return (Sprites[spriteID].y - (Sprites[spriteID].anchor.y * Sprites[spriteID].height)) + Sprites[spriteID].height
 }
 
