@@ -638,23 +638,37 @@ function touchingSprite(sprite, criteria, expand, md) {
 
 	if (expand || mode == "touch") {
 		var dimensions = [
-			[me.body.width / me.scale.x, me.body.height / me.scale.y, me.body.offset.x, me.body.offset.y],
-			[Sprites[sprite].body.width / Sprites[sprite].scale.x, Sprites[sprite].body.height / Sprites[sprite].scale.y, Sprites[sprite].body.offset.x, Sprites[sprite].body.offset.y]
+			[me.body.sourceWidth, me.body.sourceHeight, me.body.offset.x, me.body.offset.y],
+			[Sprites[sprite].body.sourceWidth, Sprites[sprite].body.sourceHeight, Sprites[sprite].body.offset.x, Sprites[sprite].body.offset.y]
 		]
 
-		var size = Math.max(me.body.width, me.body.height)
+		var size = Math.max(me.body.sourceWidth, me.body.sourceHeight)
 		if (mode == "touch") {
-			me.body.setSize((size + 2) / me.scale.x, (size + 2) / me.scale.y, me.body.offset.x - 1, me.body.offset.y - 1)
+			if (expand) {
+				me.body.setSize(size + 2, size + 2, me.body.offset.x - 1, me.body.offset.y - 1)
+			}
+			else {
+				me.body.setSize(me.body.sourceWidth + 2, me.body.sourceHeight + 2, me.body.offset.x - 1, me.body.offset.y - 1)
+			}
 		}
 		else {
-			me.body.setSize(size / me.scale.x, size / me.scale.y)
+			if (expand) {
+				me.body.setSize(size, size)
+			}
 		}
-		var size = Math.max(Sprites[sprite].body.width, Sprites[sprite].body.height)
+		var size = Math.max(Sprites[sprite].body.sourceWidth, Sprites[sprite].body.sourceHeight)
 		if (mode == "touch") {
-			Sprites[sprite].body.setSize((size + 2) / Sprites[sprite].scale.x, (size + 2) / Sprites[sprite].scale.y, Sprites[sprite].body.offset.x - 1, Sprites[sprite].body.offset.y - 1)
+			if (expand) {
+				Sprites[sprite].body.setSize(size + 2, size + 2, Sprites[sprite].body.offset.x - 1, Sprites[sprite].body.offset.y - 1)
+			}
+			else {
+				Sprites[sprite].body.setSize(Sprites[sprite].body.sourceWidth + 2, Sprites[sprite].body.sourceHeight + 2, Sprites[sprite].body.offset.x - 1, Sprites[sprite].body.offset.y - 1)
+			}
 		}
 		else {
-			Sprites[sprite].body.setSize(size / Sprites[sprite].scale.x, size / Sprites[sprite].scale.y)
+			if (expand) {
+				Sprites[sprite].body.setSize(size, size)
+			}
 		}
 	}
 	if (criteria != undefined) {
@@ -1109,7 +1123,7 @@ colision = {
 			while (i < data.data.length) {
 				if (data.data[i] == 192) {
 					if (criteria != undefined) {
-						if (criteria(spr)) {
+						if (criteria(sprite)) {
 							colision.lastColision.time = (new Date() - start) / 1000
 							return true
 						}
