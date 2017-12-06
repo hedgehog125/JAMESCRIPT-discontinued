@@ -1,9 +1,26 @@
 // Under creative commons licence see: https://creativecommons.org/
-// Github repo: -Insert here-
-
+// Github repo: https://github.com/hedgehog125/JAMESCRIPT
 
 if (! ("Phaser" in window)) {
 	throw "JAMESCRIPT: Fatal error: Phaser has not been initialised."
+}
+if (! ("state" in window)) {
+	state = []
+}
+if (! ("Assets" in window)) {
+	throw new Error("JAMESCRIPT: Fatal Error: Assets has not been defined.")
+}
+if (getEl("game") == null) {
+	throw new Error("JAMESCRIPT: Fatal Error: Unable to find GameFrame: Element with the id of 'game' doesn't exist.")
+}
+
+if (! ("doubleScriptsAllowed" in window)) {
+	doubleScriptsAllowed = true
+}
+
+// Check the JSON...
+if (! ("scripts" in Assets)) {
+	throw new Error("JAMESCRIPT: Fatal Error: 'scripts' does not exist in the JSON.")
 }
 
 cloneCount = 0
@@ -48,48 +65,89 @@ var width = 800
 var height = 450
 var currentFPS = "?"
 
+var fadeDotError = [
+	"JAMESCRIPT: Fatal Error: No image to run speedtest on.",
+	"This could be because the FadeDot image is missing.",
+	"To fix this error:",
+	"1) Paint a single black pixel." ,
+	"2) Put it in assets/imgs.",
+	"3) Name it 'fade'.",
+	"4) Make sure it has the extention '.png'.",
+	"5) Load it into assets as 'FadeDot'."
+].join("\n")
+
+if (! ("useCanvas" in window)) {
+	useCanvas = false
+}
+
 function testRenderers() {
 	console.log("JAMESCRIPT: Running speedtest...")
 	Game = new Phaser.Game(width, height, Phaser.AUTO, "game", null, false, false)
 	testTick = 0
 	Game.state.add("Test", {
 		"preload": function() {
+			var er = false
+			if (Assets["imgs"] == undefined) {
+				var er = true
+			}
+			else {
+				if (Assets["imgs"][0] == undefined) {
+					var er = true
+				}
+			}
+			if (er) {
+				throw new Error(fadeDotError)
+			}
+
 			Game.load.image("test", "assets/imgs/" + Assets["imgs"][0]["src"])
 		},
 		"create": function() {
 			var i = 0
-			while (i < 500) {
+			while (i < 300) {
 				var sprite = Game.add.sprite(Game.rnd.integerInRange(0, Game.width), Game.rnd.integerInRange(0, Game.height), "test")
-				sprite.width = 500
-				sprite.height = 500
+				sprite.width = Game.width
+				sprite.height = Game.height
 				i++
 			}
+			avgFPS = {}
+			avgFPS.total = 0
+			avgFPS.samples = 0
+			avgFPS.value = 0
 		},
 		"update": function() {
-			if (testTick == 30) {
-				console.log("JAMESCRIPT: AUTO achieved " + currentFPS + " FPS.")
-				if (currentFPS < 50) {
-					mode = Phaser.CANVAS
-					console.log("JAMESCRIPT: FPS is low, WebGL is slow. Switching to canvas mode...")
+			if (testTick == 100) {
+				console.log("JAMESCRIPT: AUTO achieved " + avgFPS.value + " FPS.")
+				if (useCanvas) {
+					console.log("JAMESCRIPT: 'useCanvas' is true. Switching to canvas mode...")
 				}
 				else {
-					mode = Phaser.AUTO
-					console.log("JAMESCRIPT: FPS is fine, AUTO is fine.")
+					if (avgFPS.value < 50) {
+						mode = Phaser.CANVAS
+						console.log("JAMESCRIPT: FPS is low, WebGL is slow. Switching to canvas mode...")
+					}
+					else {
+						mode = Phaser.AUTO
+						console.log("JAMESCRIPT: FPS is fine, AUTO is fine.")
+					}
 				}
+
 
 				console.log("\n \n")
 
 				setTimeout(function() {
 					Game.destroy()
 					Game = new Phaser.Game(width, height, mode, "game", null, false, false)
-
 					console.log("Begining loading assets...")
 					console.log("\n")
-					setup()
+					setTimeout(setup, 30)
 				}, 0)
 			}
 			testTick++
 			currentFPS = fpsCalc.getFPS()
+
+			avgFPS.samples++
+			avgFPS.total = avgFPS.total + currentFPS
+			avgFPS.value = Math.round(avgFPS.total / avgFPS.samples)
 		}
 	})
 	Game.state.start("Test")
@@ -99,10 +157,6 @@ testRenderers()
 Sprites = {}
 SpritesIndex = {}
 
-
-if (! ("state" in window)) {
-	state = null
-}
 stateWas = state
 scriptTimes = {}
 resetScriptTimes = {}
@@ -115,6 +169,8 @@ time = "?"
 touchscreen = window.ontouchstart !== undefined
 functionForClone = null
 autoStart = true
+doubleScripts = false
+myID = null
 
 currentFade = {
 	"active": false,
@@ -171,8 +227,12 @@ LoadingState = {
 
 						setTimeout(function() {
 							if (currentFPS <= 31) {
-								GameFrame.parentNode.removeChild(GameFrame)
-								alert("Your browser seems to be running the main script at half the speed it should. This will mean the game won't work properly. \n Try a more up to date browser or maybe another device.")
+								console.warn("JAMESCRIPT: Your browser seems to be running the main script at half the speed it should. This will mean the game won't work properly. \n JAMESCRIPT will still work, but it may behave unexpectedly.")
+								doubleScripts = true
+								if (! doubleScriptsAllowed) {
+									alert("JAMESCRIPT: Your browser seems to be running the main script at half the speed it should. This will mean the game won't work properly.")
+									GameFrame.parentNode.removeChild(GameFrame)
+								}
 							}
 						}, 2000)
 						clearInterval(wait)
@@ -183,7 +243,6 @@ LoadingState = {
 				}, 30)
 			}, 500)
 		}, Game)
-		Game.stage.backgroundColor = "#000000"
 		loadingText = Game.add.text(Game.world.centerX, Game.world.centerY, "Loading... 0%", {
 			"font": "50px Arial",
 			"fill": "#FFFFFF",
@@ -198,10 +257,14 @@ LoadingState = {
 		Game.load.image("Fade_Dot", "assets/imgs/fade.png")
 		numberOfAssets = 1
 		loaded = 0
+		imagesToScan = {}
 
 		var i = 0
 		for (i in Assets["imgs"]) {
 			Game.load.image(Assets["imgs"][i]["id"], "assets/imgs/" + Assets["imgs"][i]["src"])
+			if (Assets["imgs"][i]["scan"]) {
+				imagesToScan[Assets["imgs"][i]["id"]] = true
+			}
 			numberOfAssets++
 		}
 		var i = 0
@@ -210,9 +273,14 @@ LoadingState = {
 			numberOfAssets++
 		}
 
-		Game.load.onFileComplete.add(function() {
+		Game.load.onFileComplete.add(function(progress, image) {
 			loaded++
 			loadingText.setText("Loading... " + Math.floor((loaded / numberOfAssets) * 100) + "%")
+
+
+			if (imagesToScan[image]) { // Scan the image...
+				colision.scan(Game.cache.getImage(image), image)
+			}
 		})
 		Game.load.start()
 	}
@@ -229,6 +297,9 @@ function deleteCloneByName(name) {
 }
 
 function setup() {
+	if ("prescript" in Assets) {
+		Assets["prescript"]()
+	}
 	Game.state.add("Load", LoadingState)
 	Game.state.add("GameState", GameState)
 	Game.state.start("Load")
@@ -280,7 +351,7 @@ function beginFade(speed, newState, stoptime) {
 }
 
 function move(dis) {
-	var rad = Game.math.radToDeg(me.angle)
+	var rad = Game.math.degToRad(me.angle)
 	me.x = me.x + Math.cos(rad) * dis
 	me.y = me.y + Math.sin(rad) * dis
 }
@@ -301,6 +372,28 @@ function brightness(effect) {
 	var e = effect
 	return filter(e, e, e, 0)
 }
+
+
+function getCentreX(spriteID) {
+	return (Sprites[spriteID].x - (Sprites[spriteID].anchor.x * Sprites[spriteID].width)) + (Sprites[spriteID].width / 2)
+}
+function getLeftX(spriteID) {
+	return Sprites[spriteID].x - (Sprites[spriteID].anchor.x * Sprites[spriteID].width)
+}
+function getRightX(spriteID) {
+	return (Sprites[spriteID].x - (Sprites[spriteID].anchor.x * Sprites[spriteID].width)) + Sprites[spriteID].width
+}
+
+function getCentreY(spriteID) {
+	return (Sprites[spriteID].y - (Sprites[spriteID].anchor.y * Sprites[spriteID].height)) + (Sprites[spriteID].height / 2)
+}
+function getTopY(spriteID) {
+	return Sprites[spriteID].y - (Sprites[spriteID].anchor.y * Sprites[spriteID].height)
+}
+function getBottomY(spriteID) {
+	return (Sprites[spriteID].y - (Sprites[spriteID].anchor.y * Sprites[spriteID].height)) + Sprites[spriteID].height
+}
+
 
 function assignIdForClone(sprite) {
 	var i = 0
@@ -426,29 +519,86 @@ function enableTouching() {
 	me.body.immovable = true
 }
 
-function touchingSprite(sprite, criteria) {
+function touchingSprite(sprite, criteria, expand, md) {
+	if (md == undefined) {
+		var mode = "touch"
+	}
+	else {
+		var mode = md
+	}
+
+	if (expand || mode == "touch") {
+		var dimensions = [
+			[me.body.sourceWidth, me.body.sourceHeight, me.body.offset.x, me.body.offset.y],
+			[Sprites[sprite].body.sourceWidth, Sprites[sprite].body.sourceHeight, Sprites[sprite].body.offset.x, Sprites[sprite].body.offset.y]
+		]
+
+		var size = Math.max(me.body.sourceWidth, me.body.sourceHeight)
+		if (mode == "touch") {
+			if (expand) {
+				me.body.setSize(size + 2, size + 2, me.body.offset.x - 1, me.body.offset.y - 1)
+			}
+			else {
+				me.body.setSize(me.body.sourceWidth + 2, me.body.sourceHeight + 2, me.body.offset.x - 1, me.body.offset.y - 1)
+			}
+		}
+		else {
+			if (expand) {
+				me.body.setSize(size, size)
+			}
+		}
+		var size = Math.max(Sprites[sprite].body.sourceWidth, Sprites[sprite].body.sourceHeight)
+		if (mode == "touch") {
+			if (expand) {
+				Sprites[sprite].body.setSize(size + 2, size + 2, Sprites[sprite].body.offset.x - 1, Sprites[sprite].body.offset.y - 1)
+			}
+			else {
+				Sprites[sprite].body.setSize(Sprites[sprite].body.sourceWidth + 2, Sprites[sprite].body.sourceHeight + 2, Sprites[sprite].body.offset.x - 1, Sprites[sprite].body.offset.y - 1)
+			}
+		}
+		else {
+			if (expand) {
+				Sprites[sprite].body.setSize(size, size)
+			}
+		}
+	}
 	if (criteria != undefined) {
-		if (Game.physics.arcade.collide(sprite, me, null, null, Game)) {
-			if (criteria(sprite)) {
+		if (Game.physics.arcade.collide(Sprites[sprite], me, null, null, Game)) {
+			if (expand || mode == "touch") { // Return the hitbox back to it's normal size.
+				me.body.setSize(dimensions[0][0], dimensions[0][1], dimensions[0][2], dimensions[0][3])
+				Sprites[sprite].body.setSize(dimensions[1][0], dimensions[1][1], dimensions[0][2], dimensions[0][3])
+			}
+			if (criteria(Sprites[sprite])) {
 				return true
 			}
+		}
+		if (expand || mode == "touch") { // Return the hitbox back to it's normal size.
+			me.body.setSize(dimensions[0][0], dimensions[0][1], dimensions[0][2], dimensions[0][3])
+			Sprites[sprite].body.setSize(dimensions[1][0], dimensions[1][1], dimensions[0][2], dimensions[0][3])
 		}
 		return false
 	}
 	else {
-		return Game.physics.arcade.collide(sprite, me, null, null, Game)
+		var ret = Game.physics.arcade.collide(Sprites[sprite], me, null, null, Game)
+		if (expand || mode == "touch") { // Return the hitbox back to it's normal size.
+			me.body.setSize(dimensions[0][0], dimensions[0][1], dimensions[0][2], dimensions[0][3])
+			Sprites[sprite].body.setSize(dimensions[1][0], dimensions[1][1], dimensions[0][2], dimensions[0][3])
+		}
+		return ret
 	}
 }
 
-function touchingClones(sprite, criteria) {
+function touchingClones(sprite, criteria, expand, mode) {
 	var i = 0
 	touchInfo = ""
 	for (i in spriteCloneIds[sprite]) {
-		if (spriteCloneIds[sprite][i] !== undefined) {
-			if (sprite != me.cloneOf | i != me.cloneID) {
-				if (touchingSprite(Sprites[spriteCloneIds[sprite][i]], criteria)) {
-					touchInfo = spriteCloneIds[sprite][i]
-					return true
+		if (spriteCloneIds[sprite][i] != undefined) {
+			if (Sprites[spriteCloneIds[sprite][i]] != undefined) {
+				if (sprite != me.cloneOf | i != me.cloneID) {
+					if (touchingSprite(spriteCloneIds[sprite][i], criteria, expand, mode)) {
+						touchInfo = spriteCloneIds[sprite][i]
+						return true
+					}
 				}
 			}
 		}
@@ -550,25 +700,27 @@ function create() {
 		me.JSONID = i
 
 		me.vars = {}
-		if (! (c["scripts"]["main"] === undefined || c["scripts"]["main"] === null)) {
-			if (c["scripts"]["main"].length > 0) {
-				var a = 0
-				for (a in c["scripts"]["main"]) {
-					if (scriptTimes[c["scripts"]["main"][a]["stateToRun"].toString()] === undefined) {
-						scriptTimes[c["scripts"]["main"][a]["stateToRun"].toString()] = []
+		if (c["scripts"] != undefined) {
+			if (! (c["scripts"]["main"] === undefined || c["scripts"]["main"] === null)) {
+				if (c["scripts"]["main"].length > 0) {
+					var a = 0
+					for (a in c["scripts"]["main"]) {
+						if (scriptTimes[c["scripts"]["main"][a]["stateToRun"].toString()] === undefined) {
+							scriptTimes[c["scripts"]["main"][a]["stateToRun"].toString()] = []
+						}
+						scriptTimes[c["scripts"]["main"][a]["stateToRun"].toString()][scriptTimes[c["scripts"]["main"][a]["stateToRun"].toString()].length] = [i, a]
 					}
-					scriptTimes[c["scripts"]["main"][a]["stateToRun"].toString()][scriptTimes[c["scripts"]["main"][a]["stateToRun"].toString()].length] = [i, a]
 				}
 			}
-		}
-		if (! (c["scripts"]["init"] === undefined || c["scripts"]["init"] === null)) {
-			if (c["scripts"]["init"].length > 0) {
-				var a = 0
-				for (a in c["scripts"]["init"]) {
-					if (resetScriptTimes[c["scripts"]["init"][a]["stateToRun"].toString()] === undefined) {
-						resetScriptTimes[c["scripts"]["init"][a]["stateToRun"].toString()] = []
+			if (! (c["scripts"]["init"] === undefined || c["scripts"]["init"] === null)) {
+				if (c["scripts"]["init"].length > 0) {
+					var a = 0
+					for (a in c["scripts"]["init"]) {
+						if (resetScriptTimes[c["scripts"]["init"][a]["stateToRun"].toString()] === undefined) {
+							resetScriptTimes[c["scripts"]["init"][a]["stateToRun"].toString()] = []
+						}
+						resetScriptTimes[c["scripts"]["init"][a]["stateToRun"].toString()][resetScriptTimes[c["scripts"]["init"][a]["stateToRun"].toString()].length] = [i, a]
 					}
-					resetScriptTimes[c["scripts"]["init"][a]["stateToRun"].toString()][resetScriptTimes[c["scripts"]["init"][a]["stateToRun"].toString()].length] = [i, a]
 				}
 			}
 		}
@@ -636,7 +788,7 @@ function create() {
 	}
 }
 
-function main() {
+function main(loop) {
 	inX = Game.input.x
 	inY = Game.input.y
 
@@ -715,4 +867,188 @@ function main() {
 	if (Assets["mainScript"] != undefined) {
 		Assets["mainScript"]()
 	}
+
+	if (doubleScripts && (! loop)) {
+		main(true)
+	}
 }
+
+// Accurate colision detection
+
+colision = {
+	"canvas": document.createElement("canvas"),
+	"ctx": null,
+	"scan": function(image, id) {
+		var canvas = document.createElement("canvas")
+		var ctx = canvas.getContext("2d")
+
+		var texture = image
+
+		canvas.width = texture.width
+		canvas.height = texture.height
+
+		ctx.drawImage(texture, 0, 0)
+
+		var data = ctx.getImageData(0, 0, canvas.width, canvas.height)
+
+		var i = 0
+		while (i < data.data.length) {
+			data.data[i] = 0
+			data.data[i + 1] = 0
+			data.data[i + 2] = 0
+			if (data.data[i + 3] != 0) {
+				data.data[i + 3] = 255
+				data.data[i] = 255
+			}
+			else {
+				data.data[i + 3] = 0
+			}
+			var i = i + 4
+		}
+		ctx.putImageData(data, 0, 0)
+		colision.scans[id] = canvas
+	},
+	"scans": {},
+	"lastColision": {
+		"time": 0
+	},
+	"touchingSprite": function(sprite, criteria, res, md) {
+		if (md == undefined) {
+			var mode = "touch"
+		}
+		else {
+			var mode = md
+		}
+		if (res == undefined) {
+			var resolution = 1
+		}
+		else {
+			var resolution = res
+		}
+		var start = new Date()
+		if (touchingSprite(sprite, undefined, true, mode)) { // Test!
+			var myscan = colision.scans[me.key]
+			var otherscan = colision.scans[me.key]
+			var ctx = colision.ctx
+			var canvas = colision.canvas
+
+			var spr = Sprites[sprite]
+
+			canvas.width = Game.width / resolution
+			canvas.height = Game.height / resolution
+			ctx.clearRect(0, 0, canvas.width, canvas.height)
+
+			var scaleX = function(x, resolution) {
+				return (x / Game.width) * (Game.width / resolution)
+			}
+			var scaleY = function(y, resolution) {
+				return (y / Game.height) * (Game.height / resolution)
+			}
+
+			// Draw the two images
+
+			// https://stackoverflow.com/questions/3793397/html5-canvas-drawimage-with-at-an-angle
+			if (mode == "touch") {
+				var x = scaleX((me.x - (me.width * me.anchor.x)) + (me.width / 2), resolution) - 1 // Get its centred x)
+				var y = scaleY((me.y - (me.height * me.anchor.y)) + (me.height / 2), resolution) - 1 // Get its centred x
+				var width = scaleX(me.width, resolution) + 2
+				var height = scaleY(me.height, resolution) + 2
+			}
+			else {
+				var x = scaleX((me.x - (me.width * me.anchor.x)) + (me.width / 2), resolution) // Get its centred x)
+				var y = scaleY((me.y - (me.height * me.anchor.y)) + (me.height / 2), resolution) // Get its centred x
+				var width = scaleX(me.width, resolution)
+				var height = scaleY(me.height, resolution)
+			}
+			var angleInRadians = Game.math.degToRad(me.rotation)
+
+			ctx.globalAlpha = 0.5
+
+			if (me.rotation != 0) {
+				ctx.save()
+				ctx.translate(x, y)
+				ctx.rotate(angleInRadians)
+				ctx.drawImage(colision.scans[me.key], -width / 2, -height / 2, width, height)
+				ctx.rotate(-angleInRadians)
+				ctx.translate(-x, -y)
+				ctx.restore()
+			}
+			else {
+				ctx.drawImage(colision.scans[me.key], x - (width / 2), y - (height / 2), width, height)
+			}
+
+			// Draw the other image...
+
+			if (mode == "touch") {
+				var x = scaleX((spr.x - (spr.width * spr.anchor.x)) + (spr.width / 2), resolution) - 1 // Get its centred x
+				var y = scaleY((spr.y - (spr.height * spr.anchor.y)) + (spr.height / 2), resolution) - 1 // Get its centred y
+				var width = scaleX(spr.width, resolution) + 2
+				var height = scaleY(spr.height, resolution) + 2
+			}
+			else {
+				var x = scaleX((spr.x - (spr.width * spr.anchor.x)) + (spr.width / 2), resolution) // Get its centred x
+				var y = scaleY((spr.y - (spr.height * spr.anchor.y)) + (spr.height / 2), resolution) // Get its centred y
+				var width = scaleX(spr.width, resolution)
+				var height = scaleY(spr.height, resolution)
+			}
+			var angleInRadians = Game.math.degToRad(spr.rotation)
+
+			ctx.globalAlpha = 0.5
+
+			if (spr.rotation != 0) {
+				ctx.save()
+				ctx.translate(x, y)
+				ctx.rotate(angleInRadians)
+				ctx.drawImage(colision.scans[spr.key], -width / 2, -height / 2, width, height)
+				ctx.rotate(-angleInRadians)
+				ctx.translate(-x, -y)
+				ctx.restore()
+			}
+			else {
+				ctx.drawImage(colision.scans[spr.key], x - (width / 2), y - (height / 2), width, height)
+			}
+
+			var data = ctx.getImageData(0, 0, canvas.width, canvas.height)
+
+			var i = 3
+			while (i < data.data.length) {
+				if (data.data[i] == 192) {
+					if (criteria != undefined) {
+						if (criteria(sprite)) {
+							colision.lastColision.time = (new Date() - start) / 1000
+							return true
+						}
+					}
+					else {
+						colision.lastColision.time = (new Date() - start) / 1000
+						return true
+					}
+				}
+				i = i + 4
+			}
+		}
+
+		colision.lastColision.time = (new Date() - start) / 1000
+		return false
+	},
+	"touchingClones": function(sprite, criteria, res, mode) {
+		var i = 0
+		colision.touchInfo = ""
+		for (i in spriteCloneIds[sprite]) {
+			if (spriteCloneIds[sprite][i] != undefined) {
+				if (Sprites[spriteCloneIds[sprite][i]] != undefined) {
+					if (sprite != me.cloneOf | i != me.cloneID) {
+						if (colision.touchingSprite(spriteCloneIds[sprite][i], criteria, res, mode)) {
+							touchInfo = spriteCloneIds[sprite][i]
+							return true
+						}
+					}
+				}
+			}
+		}
+		return false
+	},
+	"touchInfo": null
+}
+colision.ctx = colision.canvas.getContext("2d")
+colision.ctx.imageSmoothingEnabled = false

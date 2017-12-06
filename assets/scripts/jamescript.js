@@ -504,6 +504,28 @@ function brightness(effect) {
 	return filter(e, e, e, 0)
 }
 
+
+function getCentreX(spriteID) {
+	return (Sprites[spriteID].x - (Sprites[spriteID].anchor.x * Sprites[spriteID].width)) + (Sprites[spriteID].width / 2)
+}
+function getLeftX(spriteID) {
+	return Sprites[spriteID].x - (Sprites[spriteID].anchor.x * Sprites[spriteID].width)
+}
+function getRightX(spriteID) {
+	return (Sprites[spriteID].x - (Sprites[spriteID].anchor.x * Sprites[spriteID].width)) + Sprites[spriteID].width
+}
+
+function getCentreY(spriteID) {
+	return (Sprites[spriteID].y - (Sprites[spriteID].anchor.y * Sprites[spriteID].height)) + (Sprites[spriteID].height / 2)
+}
+function getTopY(spriteID) {
+	return Sprites[spriteID].y - (Sprites[spriteID].anchor.y * Sprites[spriteID].height)
+}
+function getBottomY(spriteID) {
+	return (Sprites[spriteID].y - (Sprites[spriteID].anchor.y * Sprites[spriteID].height)) + Sprites[spriteID].height
+}
+
+
 function assignIdForClone(sprite) {
 	var i = 0
 	for (i in spriteCloneIds[sprite]) {
