@@ -669,6 +669,9 @@ function enableTouching() {
 }
 
 function touchingSprite(sprite, criteria, expand, md) {
+	if (me.body == null || Sprites[sprite].body == null) {
+		return false // It won't work if collision hasn't been enabled.
+	}
 	if (md == undefined) {
 		var mode = "touch"
 	}
