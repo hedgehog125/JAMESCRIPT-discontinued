@@ -731,7 +731,17 @@ function touchingSprite(sprite, criteria, expand, md) {
 		return false
 	}
 	else {
-		var ret = Game.physics.arcade.collide(Sprites[sprite], me, null, null, Game)
+		//var ret = Game.physics.arcade.collide(Sprites[sprite], me, null, null, Game)
+		// ^ The above seems to be wrong sometimes ^
+		if (me.x < Sprites[sprite].x + Sprites[sprite].body.width && // From https://developer.mozilla.org/en-US/docs/Games/Techniques/2D_collision_detection
+   			me.x + me.body.width > Sprites[sprite].x &&
+   			me.y < Sprites[sprite].y + Sprites[sprite].body.height &&
+   			me.body.height + me.y > Sprites[sprite].y) {
+				var ret = true
+		}
+		else {
+			var ret = false
+		}
 		if (expand || mode == "touch") { // Return the hitbox back to it's normal size.
 			me.body.setSize(dimensions[0][0], dimensions[0][1], dimensions[0][2], dimensions[0][3])
 			Sprites[sprite].body.setSize(dimensions[1][0], dimensions[1][1], dimensions[0][2], dimensions[0][3])
