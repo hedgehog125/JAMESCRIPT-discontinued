@@ -246,7 +246,7 @@ function testRenderers() {
 			avgFPS.value = 0
 		},
 		"update": function() {
-			if (testTick == 100) {
+			if (testTick == 120) {
 				console.log("JAMESCRIPT: AUTO achieved " + avgFPS.value + " FPS.")
 				if (useCanvas) {
 					console.log("JAMESCRIPT: 'useCanvas' is true. Switching to canvas mode...")
@@ -410,7 +410,7 @@ LoadingState = {
 
 
 			if (imagesToScan[image]) { // Scan the image...
-				colision.scan(Game.cache.getImage(image), image)
+				collision.scan(Game.cache.getImage(image), image)
 			}
 		})
 		Game.load.start()
@@ -543,6 +543,43 @@ function getBottomY(spriteID) {
 	return (Sprites[spriteID].y - (Sprites[spriteID].anchor.y * Sprites[spriteID].height)) + Sprites[spriteID].height
 }
 
+function sortOb(ob, convertToArrays, dir) { // Based off https://stackoverflow.com/questions/1069666/sorting-javascript-object-by-property-value
+    var arr = []
+    var i = 0
+    for (i in ob) {
+        arr[arr.length] = [i, ob[i]]
+    }
+	if (dir == "highestFirst") {
+		arr.sort(function(a, b) {
+	        return a[1] + b[1]
+	    })
+	}
+	else {
+		arr.sort(function(a, b) {
+	        return a[1] - b[1]
+	    })
+	}
+
+	if (convertToArrays) {
+		var newArr = [[], []]
+	    var i = 0
+	    for (i in arr) {
+	        newArr[0][i] = arr[i][1]
+			newArr[1][i] = arr[i][0]
+	    }
+	    return newArr
+	}
+	else {
+		var newOb = {}
+	    var i = 0
+	    for (i in arr) {
+	        newOb[arr[i][0]] = arr[i][1]
+			console.log(arr[i][0])
+	    }
+	    return newOb
+	}
+}
+
 
 function assignIdForClone(sprite) {
 	var i = 0
@@ -668,10 +705,20 @@ function enableTouching() {
 	me.body.immovable = true
 }
 
+function jumpInFrontOfSprite(sprite) {
+	me.sendToBack()
+	var i = 0
+	while (i < Sprites[sprite].z + 1) {
+		me.moveUp()
+		i++
+	}
+}
+
 function touchingSprite(sprite, criteria, expand, md) {
 	if (me.body == null || Sprites[sprite].body == null) {
 		return false // It won't work if collision hasn't been enabled.
 	}
+	//var mode = ""
 	if (md == undefined) {
 		var mode = "touch"
 	}
@@ -679,12 +726,63 @@ function touchingSprite(sprite, criteria, expand, md) {
 		var mode = md
 	}
 
-	if (expand || mode == "touch") {
-		var dimensions = [
-			[me.body.sourceWidth, me.body.sourceHeight, me.body.offset.x, me.body.offset.y],
-			[Sprites[sprite].body.sourceWidth, Sprites[sprite].body.sourceHeight, Sprites[sprite].body.offset.x, Sprites[sprite].body.offset.y]
-		]
+	var revert = function() {
+		me.x = me.body.x + (me.anchor.x * me.width)
+		me.y = me.body.y + (me.anchor.y * me.height)
+		Sprites[sprite].x = Sprites[sprite].body.x + (Sprites[sprite].anchor.x * Sprites[sprite].width)
+		Sprites[sprite].y = Sprites[sprite].body.y + (Sprites[sprite].anchor.y * Sprites[sprite].height)
 
+		me.body.setSize(dimensions[0][0], dimensions[0][1], dimensions[0][2], dimensions[0][3])
+		Sprites[sprite].body.setSize(dimensions[1][0], dimensions[1][1], dimensions[1][2], dimensions[1][3])
+
+		me.body.x = dimensions[0][6]
+		me.body.y = dimensions[0][7]
+		Sprites[sprite].body.x = dimensions[1][6]
+		Sprites[sprite].body.y = dimensions[1][7]
+	}
+
+	if (expand || mode == "touch") {
+		// Save these so we can revert back to them later...
+		var dimensions = [
+			[
+				me.body.sourceWidth,
+				me.body.sourceHeight,
+				me.body.offset.x,
+				me.body.offset.y,
+				me.x,
+				me.y,
+				me.body.x,
+				me.body.y,
+				getLeftX(),
+				getTopY()
+			],
+			[
+				Sprites[sprite].body.sourceWidth,
+				Sprites[sprite].body.sourceHeight,
+				Sprites[sprite].body.offset.x,
+				Sprites[sprite].body.offset.y,
+				Sprites[sprite].x,
+				Sprites[sprite].y,
+				Sprites[sprite].body.x,
+				Sprites[sprite].body.y,
+				getLeftX(sprite),
+				getTopY(sprite)
+			]
+		]
+		// So that we can update the body position...
+		me.x = 0
+		me.y = 0
+		Sprites[sprite].x = 0
+		Sprites[sprite].y = 0
+
+		// Update the body position...
+		me.body.x = dimensions[0][8]
+		me.body.y = dimensions[0][9]
+		Sprites[sprite].body.x = dimensions[1][8]
+		Sprites[sprite].body.y = dimensions[1][9]
+
+
+		// Change the hitbox size based on inputs...
 		var size = Math.max(me.body.sourceWidth, me.body.sourceHeight)
 		if (mode == "touch") {
 			if (expand) {
@@ -715,37 +813,19 @@ function touchingSprite(sprite, criteria, expand, md) {
 		}
 	}
 	if (criteria != undefined) {
-		if (Game.physics.arcade.collide(Sprites[sprite], me, null, null, Game)) {
-			if (expand || mode == "touch") { // Return the hitbox back to it's normal size.
-				me.body.setSize(dimensions[0][0], dimensions[0][1], dimensions[0][2], dimensions[0][3])
-				Sprites[sprite].body.setSize(dimensions[1][0], dimensions[1][1], dimensions[0][2], dimensions[0][3])
-			}
+		var ret = Game.physics.arcade.overlap(Sprites[sprite], me, null, null, Game)
+		if (ret) {
 			if (criteria(Sprites[sprite])) {
+				revert() // Return the hitbox back to it's normal size.
 				return true
 			}
 		}
-		if (expand || mode == "touch") { // Return the hitbox back to it's normal size.
-			me.body.setSize(dimensions[0][0], dimensions[0][1], dimensions[0][2], dimensions[0][3])
-			Sprites[sprite].body.setSize(dimensions[1][0], dimensions[1][1], dimensions[0][2], dimensions[0][3])
-		}
+		revert() // Return the hitbox back to it's normal size.
 		return false
 	}
 	else {
-		//var ret = Game.physics.arcade.collide(Sprites[sprite], me, null, null, Game)
-		// ^ The above seems to be wrong sometimes ^
-		if (me.x < Sprites[sprite].x + Sprites[sprite].body.width && // From https://developer.mozilla.org/en-US/docs/Games/Techniques/2D_collision_detection
-   			me.x + me.body.width > Sprites[sprite].x &&
-   			me.y < Sprites[sprite].y + Sprites[sprite].body.height &&
-   			me.body.height + me.y > Sprites[sprite].y) {
-				var ret = true
-		}
-		else {
-			var ret = false
-		}
-		if (expand || mode == "touch") { // Return the hitbox back to it's normal size.
-			me.body.setSize(dimensions[0][0], dimensions[0][1], dimensions[0][2], dimensions[0][3])
-			Sprites[sprite].body.setSize(dimensions[1][0], dimensions[1][1], dimensions[0][2], dimensions[0][3])
-		}
+		var ret = Game.physics.arcade.overlap(Sprites[sprite], me, null, null, Game)
+		revert() // Return the hitbox back to it's normal size.
 		return ret
 	}
 }
@@ -825,7 +905,12 @@ internal.createSprite = function(ob) {
 	}
 	else {
 		if (ob["type"] == "text") {
-			me = Game.add.text(ob["x"], ob["y"], ob["text"], ob["settings"])
+			if ("settings" in ob) {
+				me = Game.add.text(ob["x"], ob["y"], ob["text"], ob["settings"])
+			}
+			else {
+				me = Game.add.text(ob["x"], ob["y"], ob["text"], {})
+			}
 			me.smoothed = true
 			spriteCloneIds[ob["id"]] = []
 		}
@@ -1037,7 +1122,7 @@ function main(loop) {
 
 // Accurate colision detection
 
-colision = {
+collision = {
 	"canvas": document.createElement("canvas"),
 	"ctx": null,
 	"scan": function(image, id) {
@@ -1087,18 +1172,32 @@ colision = {
 		else {
 			var resolution = res
 		}
+		var spr = Sprites[sprite]
+
 		var start = new Date()
-		if (touchingSprite(sprite, undefined, true, mode)) { // Test!
+
+		if (colision.scans[me.key] == null || colision.scans[spr.key] == null) {
+			var unscanned = []
+			if (colision.scans[me.key] == null) {
+				unscanned[unscanned.length] = me.key
+			}
+			if (colision.scans[spr.key] == null) {
+				unscanned[unscanned.length] = spr.key
+			}
+			if (unscanned.length == 1) {
+				throw new Error("JAMESCRIPT: Pixel perfect colision detection has failed. " + unscanned[0] + " has not been scanned. Add the property 'scan' when you load it if you want it scanned.")
+			}
+			else {
+				throw new Error("JAMESCRIPT: Pixel perfect colision detection has failed. " + unscanned.join(" and ") + " have not been scanned. Add the property 'scan' when you load them if you want them scanned.")
+			}
+
+		}
+
+		if (touchingSprite(sprite, criteria, true, mode)) {
 			var myscan = colision.scans[me.key]
 			var otherscan = colision.scans[me.key]
 			var ctx = colision.ctx
 			var canvas = colision.canvas
-
-			var spr = Sprites[sprite]
-
-			canvas.width = Game.width / resolution
-			canvas.height = Game.height / resolution
-			ctx.clearRect(0, 0, canvas.width, canvas.height)
 
 			var scaleX = function(x, resolution) {
 				return (x / Game.width) * (Game.width / resolution)
@@ -1107,9 +1206,8 @@ colision = {
 				return (y / Game.height) * (Game.height / resolution)
 			}
 
-			// Draw the two images
 
-			// https://stackoverflow.com/questions/3793397/html5-canvas-drawimage-with-at-an-angle
+			var colisionInfo = []
 			if (mode == "touch") {
 				var x = scaleX((me.x - (me.width * me.anchor.x)) + (me.width / 2), resolution) - 1 // Get its centred x)
 				var y = scaleY((me.y - (me.height * me.anchor.y)) + (me.height / 2), resolution) - 1 // Get its centred x
@@ -1122,6 +1220,46 @@ colision = {
 				var width = scaleX(me.width, resolution)
 				var height = scaleY(me.height, resolution)
 			}
+
+			colisionInfo[0] = [x, y, width, height]
+			if (mode == "touch") {
+				var x = scaleX((spr.x - (spr.width * spr.anchor.x)) + (spr.width / 2), resolution) - 1 // Get its centred x
+				var y = scaleY((spr.y - (spr.height * spr.anchor.y)) + (spr.height / 2), resolution) - 1 // Get its centred y
+				var width = scaleX(spr.width, resolution) + 2
+				var height = scaleY(spr.height, resolution) + 2
+			}
+			else {
+				var x = scaleX((spr.x - (spr.width * spr.anchor.x)) + (spr.width / 2), resolution) // Get its centred x
+				var y = scaleY((spr.y - (spr.height * spr.anchor.y)) + (spr.height / 2), resolution) // Get its centred y
+				var width = scaleX(spr.width, resolution)
+				var height = scaleY(spr.height, resolution)
+			}
+			colisionInfo[1] = [x, y, width, height]
+
+			var widthNeeded = Math.max(colisionInfo[0][0] + (colisionInfo[0][2] / 2), colisionInfo[1][0] + (colisionInfo[1][2] / 2))
+			var heightNeeded = Math.max(colisionInfo[0][1], colisionInfo[1][1]) + (Math.max(colisionInfo[0][3], colisionInfo[1][3]) / 2)
+			var cropX = Math.max(colisionInfo[0][0] - (colisionInfo[0][2] / 2), colisionInfo[1][0] - (colisionInfo[1][2] / 2))
+			var cropY = Math.max(colisionInfo[0][1] - (colisionInfo[0][3] / 2), colisionInfo[1][1] - (colisionInfo[1][3] / 2))
+			colisionInfo[0][0] = colisionInfo[0][0] - cropX
+			colisionInfo[0][1] = colisionInfo[0][1] - cropY
+			colisionInfo[1][0] = colisionInfo[1][0] - cropX
+			colisionInfo[1][1] = colisionInfo[1][1] - cropY
+
+
+
+
+			canvas.width = widthNeeded - cropX
+			canvas.height = heightNeeded - cropY
+			ctx.clearRect(0, 0, canvas.width, canvas.height)
+
+
+			// Draw the two images
+
+			// https://stackoverflow.com/questions/3793397/html5-canvas-drawimage-with-at-an-angle
+			var x = colisionInfo[0][0]
+			var y = colisionInfo[0][1]
+			var width = colisionInfo[0][2]
+			var height = colisionInfo[0][3]
 			var angleInRadians = Game.math.degToRad(me.rotation)
 
 			ctx.globalAlpha = 0.5
@@ -1141,18 +1279,10 @@ colision = {
 
 			// Draw the other image...
 
-			if (mode == "touch") {
-				var x = scaleX((spr.x - (spr.width * spr.anchor.x)) + (spr.width / 2), resolution) - 1 // Get its centred x
-				var y = scaleY((spr.y - (spr.height * spr.anchor.y)) + (spr.height / 2), resolution) - 1 // Get its centred y
-				var width = scaleX(spr.width, resolution) + 2
-				var height = scaleY(spr.height, resolution) + 2
-			}
-			else {
-				var x = scaleX((spr.x - (spr.width * spr.anchor.x)) + (spr.width / 2), resolution) // Get its centred x
-				var y = scaleY((spr.y - (spr.height * spr.anchor.y)) + (spr.height / 2), resolution) // Get its centred y
-				var width = scaleX(spr.width, resolution)
-				var height = scaleY(spr.height, resolution)
-			}
+			var x = colisionInfo[1][0]
+			var y = colisionInfo[1][1]
+			var width = colisionInfo[1][2]
+			var height = colisionInfo[1][3]
 			var angleInRadians = Game.math.degToRad(spr.rotation)
 
 			ctx.globalAlpha = 0.5
@@ -1175,16 +1305,8 @@ colision = {
 			var i = 3
 			while (i < data.data.length) {
 				if (data.data[i] == 192) {
-					if (criteria != undefined) {
-						if (criteria(sprite)) {
-							colision.lastColision.time = (new Date() - start) / 1000
-							return true
-						}
-					}
-					else {
-						colision.lastColision.time = (new Date() - start) / 1000
-						return true
-					}
+					colision.lastColision.time = (new Date() - start) / 1000
+					return true
 				}
 				i = i + 4
 			}
@@ -1212,5 +1334,5 @@ colision = {
 	},
 	"touchInfo": null
 }
-colision.ctx = colision.canvas.getContext("2d")
-colision.ctx.imageSmoothingEnabled = false
+collision.ctx = collision.canvas.getContext("2d")
+collision.ctx.imageSmoothingEnabled = false
