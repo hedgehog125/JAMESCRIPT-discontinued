@@ -215,6 +215,7 @@ function testRenderers() {
 	console.log("JAMESCRIPT: Running speedtest...")
 	Game = new Phaser.Game(width, height, Phaser.AUTO, "game", null, false, false)
 	testTick = 0
+	speedtestSprites = []
 	Game.state.add("Test", {
 		"preload": function() {
 			var er = false
@@ -234,10 +235,11 @@ function testRenderers() {
 		},
 		"create": function() {
 			var i = 0
-			while (i < 300) {
+			while (i < 150) {
 				var sprite = Game.add.sprite(Game.rnd.integerInRange(0, Game.width), Game.rnd.integerInRange(0, Game.height), "test")
 				sprite.width = Game.width
 				sprite.height = Game.height
+				speedtestSprites[speedtestSprites.length] = sprite
 				i++
 			}
 			avgFPS = {}
@@ -246,7 +248,13 @@ function testRenderers() {
 			avgFPS.value = 0
 		},
 		"update": function() {
-			if (testTick == 120) {
+			var i = 0
+			for (i in speedtestSprites) {
+				var sprite = speedtestSprites[i]
+				sprite.x = Game.rnd.integerInRange(0, Game.width)
+				sprite.y = Game.rnd.integerInRange(0, Game.height)
+			}
+			if (testTick == 50) {
 				console.log("JAMESCRIPT: AUTO achieved " + avgFPS.value + " FPS.")
 				if (useCanvas) {
 					console.log("JAMESCRIPT: 'useCanvas' is true. Switching to canvas mode...")
