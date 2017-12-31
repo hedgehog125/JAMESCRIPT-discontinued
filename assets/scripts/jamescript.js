@@ -262,15 +262,11 @@ function testRenderers() {
 			if (er) {
 				throw new Error(fadeDotError)
 			}
-
-			Game.load.image("test", "assets/imgs/" + Assets["imgs"][0]["src"])
 		},
 		"create": function() {
 			var i = 0
-			while (i < 150) {
-				var sprite = Game.add.sprite(Game.rnd.integerInRange(0, Game.width), Game.rnd.integerInRange(0, Game.height), "test")
-				sprite.width = Game.width
-				sprite.height = Game.height
+			while (i < 10) {
+				var sprite = Game.add.text(Game.rnd.integerInRange(0, Game.width), Game.rnd.integerInRange(0, Game.height), "test", {})
 				speedtestSprites[speedtestSprites.length] = sprite
 				i++
 			}
@@ -286,7 +282,7 @@ function testRenderers() {
 				sprite.x = Game.rnd.integerInRange(0, Game.width)
 				sprite.y = Game.rnd.integerInRange(0, Game.height)
 			}
-			if (testTick == 50) {
+			if (testTick == 30) {
 				console.log("JAMESCRIPT: AUTO achieved " + avgFPS.value + " FPS.")
 				if (useCanvas) {
 					console.log("JAMESCRIPT: 'useCanvas' is true. Switching to canvas mode...")
@@ -980,6 +976,7 @@ function create() {
 	for (i in Assets["sprites"]) {
 		var i = JSON.parse(i)
 		var c = Assets["sprites"][i]
+
 		SpritesIndex[c["id"]] = i
 		myJSON = c
 
