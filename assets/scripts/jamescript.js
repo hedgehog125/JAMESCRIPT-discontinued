@@ -170,6 +170,9 @@ if (! ("Phaser" in window)) {
 if (! ("state" in window)) {
 	state = []
 }
+if (! ("hitboxes" in window)) {
+	hitboxes = false
+}
 if (! ("Assets" in window)) {
 	throw new Error("JAMESCRIPT: Fatal Error: Assets has not been defined.")
 }
@@ -374,7 +377,17 @@ finishLoading = function() {
 
 GameState = {
 	"preload": finishLoading,
-	"update": main
+	"update": main,
+	"render": function() {
+		if (hitboxes) {
+			var i = 0
+			for (i in Sprites) {
+				if (Sprites[i] != undefined) {
+					Game.debug.body(Sprites[i])
+				}
+			}
+		}
+	}
 }
 
 LoadingState = {
@@ -610,7 +623,6 @@ function sortOb(ob, convertToArrays, dir) { // Based off https://stackoverflow.c
 	    var i = 0
 	    for (i in arr) {
 	        newOb[arr[i][0]] = arr[i][1]
-			console.log(arr[i][0])
 	    }
 	    return newOb
 	}
@@ -754,7 +766,6 @@ function touchingSprite(sprite, criteria, expand, md) {
 	if (me.body == null || Sprites[sprite].body == null) {
 		return false // It won't work if collision hasn't been enabled.
 	}
-	//var mode = ""
 	if (md == undefined) {
 		var mode = "touch"
 	}
@@ -763,93 +774,75 @@ function touchingSprite(sprite, criteria, expand, md) {
 	}
 
 	var revert = function() {
-		me.x = me.body.x + (me.anchor.x * me.width)
-		me.y = me.body.y + (me.anchor.y * me.height)
-		Sprites[sprite].x = Sprites[sprite].body.x + (Sprites[sprite].anchor.x * Sprites[sprite].width)
-		Sprites[sprite].y = Sprites[sprite].body.y + (Sprites[sprite].anchor.y * Sprites[sprite].height)
+		me.x = dimensions[0][4]
+		me.y = dimensions[0][5]
+		Sprites[sprite].x = dimensions[1][4]
+		Sprites[sprite].y = dimensions[1][5]
 
-		me.body.setSize(dimensions[0][0], dimensions[0][1], dimensions[0][2], dimensions[0][3])
-		Sprites[sprite].body.setSize(dimensions[1][0], dimensions[1][1], dimensions[1][2], dimensions[1][3])
-
-		me.body.x = dimensions[0][6]
-		me.body.y = dimensions[0][7]
+		me.body.position.x = dimensions[0][6]
+		me.body.position.y = dimensions[0][7]
 		Sprites[sprite].body.x = dimensions[1][6]
 		Sprites[sprite].body.y = dimensions[1][7]
 	}
 
-	if (expand || mode == "touch") {
-		// Save these so we can revert back to them later...
-		var dimensions = [
-			[
-				me.body.sourceWidth,
-				me.body.sourceHeight,
-				me.body.offset.x,
-				me.body.offset.y,
-				me.x,
-				me.y,
-				me.body.x,
-				me.body.y,
-				getLeftX(),
-				getTopY()
-			],
-			[
-				Sprites[sprite].body.sourceWidth,
-				Sprites[sprite].body.sourceHeight,
-				Sprites[sprite].body.offset.x,
-				Sprites[sprite].body.offset.y,
-				Sprites[sprite].x,
-				Sprites[sprite].y,
-				Sprites[sprite].body.x,
-				Sprites[sprite].body.y,
-				getLeftX(sprite),
-				getTopY(sprite)
-			]
+	// Save these so we can revert back to them later...
+	var dimensions = [
+		[
+			me.body.sourceWidth,
+			me.body.sourceHeight,
+			me.body.offset.x,
+			me.body.offset.y,
+			me.x,
+			me.y,
+			me.body.x,
+			me.body.y,
+			getLeftX(),
+			getTopY()
+		],
+		[
+			Sprites[sprite].body.sourceWidth,
+			Sprites[sprite].body.sourceHeight,
+			Sprites[sprite].body.offset.x,
+			Sprites[sprite].body.offset.y,
+			Sprites[sprite].x,
+			Sprites[sprite].y,
+			Sprites[sprite].body.x,
+			Sprites[sprite].body.y,
+			getLeftX(sprite),
+			getTopY(sprite)
 		]
-		// So that we can update the body position...
-		me.x = 0
-		me.y = 0
-		Sprites[sprite].x = 0
-		Sprites[sprite].y = 0
+	]
 
-		// Update the body position...
-		me.body.x = dimensions[0][8]
-		me.body.y = dimensions[0][9]
-		Sprites[sprite].body.x = dimensions[1][8]
-		Sprites[sprite].body.y = dimensions[1][9]
+	// Update the body position...
+	me.body.x = dimensions[0][8] + (dimensions[0][2] * me.scale.x)
+	me.body.y = dimensions[0][9] + (dimensions[0][3] * me.scale.y)
+	Sprites[sprite].body.x = dimensions[1][8] + (dimensions[1][2] * Sprites[sprite].scale.x)
+	Sprites[sprite].body.y = dimensions[1][9] + (dimensions[1][3] * Sprites[sprite].scale.y)
 
 
-		// Change the hitbox size based on inputs...
-		var size = Math.max(me.body.sourceWidth, me.body.sourceHeight)
-		if (mode == "touch") {
-			if (expand) {
-				me.body.setSize(size + 2, size + 2, me.body.offset.x - 1, me.body.offset.y - 1)
-			}
-			else {
-				me.body.setSize(me.body.sourceWidth + 2, me.body.sourceHeight + 2, me.body.offset.x - 1, me.body.offset.y - 1)
-			}
-		}
-		else {
-			if (expand) {
-				me.body.setSize(size, size)
-			}
-		}
-		var size = Math.max(Sprites[sprite].body.sourceWidth, Sprites[sprite].body.sourceHeight)
-		if (mode == "touch") {
-			if (expand) {
-				Sprites[sprite].body.setSize(size + 2, size + 2, Sprites[sprite].body.offset.x - 1, Sprites[sprite].body.offset.y - 1)
-			}
-			else {
-				Sprites[sprite].body.setSize(Sprites[sprite].body.sourceWidth + 2, Sprites[sprite].body.sourceHeight + 2, Sprites[sprite].body.offset.x - 1, Sprites[sprite].body.offset.y - 1)
-			}
-		}
-		else {
-			if (expand) {
-				Sprites[sprite].body.setSize(size, size)
-			}
-		}
+	// Change the hitbox size based on inputs...
+	var width = (me.body.width / me.scale.x)
+	var height = (me.body.height / me.scale.y)
+
+	var size = Math.max(width, height)
+	if (expand) {
+		me.body.setSize(size, size)
+	}
+
+	var width = (Sprites[sprite].body.width / Sprites[sprite].scale.x)
+	var height = (Sprites[sprite].body.height / Sprites[sprite].scale.y)
+
+	var size = Math.max(width, height)
+	if (expand) {
+		Sprites[sprite].body.setSize(size, size)
 	}
 	if (criteria != undefined) {
-		var ret = Game.physics.arcade.overlap(Sprites[sprite], me, null, null, Game)
+		if (mode == "touch") {
+			var ret = Game.physics.arcade.collide(Sprites[sprite], me)
+		}
+		else {
+			var ret = Game.physics.arcade.overlap(Sprites[sprite], me)
+		}
 		if (ret) {
 			if (criteria(Sprites[sprite])) {
 				revert() // Return the hitbox back to it's normal size.
@@ -860,7 +853,12 @@ function touchingSprite(sprite, criteria, expand, md) {
 		return false
 	}
 	else {
-		var ret = Game.physics.arcade.overlap(Sprites[sprite], me, null, null, Game)
+		if (mode == "touch") {
+			var ret = Game.physics.arcade.collide(Sprites[sprite], me)
+		}
+		else {
+			var ret = Game.physics.arcade.overlap(Sprites[sprite], me)
+		}
 		revert() // Return the hitbox back to it's normal size.
 		return ret
 	}

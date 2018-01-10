@@ -3,6 +3,9 @@
 
 // Just the collision detection!!! <======
 
+
+// UPDATE FROM THE JAMESCRIPT USED FOR THE COLISION THING!!!!!!!!!!! <===================
+
 collision = {
 	"canvas": document.createElement("canvas"),
 	"ctx": null,
@@ -44,7 +47,6 @@ collision = {
 		// Mostly from https://stackoverflow.com/questions/19753134/get-the-points-of-intersection-from-2-rectangles
 		var x = Math.max(AABBs[0][0], AABBs[1][0])
 		var y = Math.max(AABBs[0][1], AABBs[1][1])
-		console.log(AABBs)
 		if (AABBs[0][0] + AABBs[0][2] < AABBs[1][0] + AABBs[1][2]) {
 			var width = (AABBs[0][0] + AABBs[0][2]) - x
 		}
@@ -138,10 +140,11 @@ collision = {
 			collisionInfo[1] = [x, y, width, height]
 
 
-			// This code is no longer needed since I've made an even better method of cropping the canvas...
-			// Although, some of it is needed to work out where to draw the images.
+			var AABBs = [[collisionInfo[0][0], collisionInfo[0][1], collisionInfo[0][2], collisionInfo[0][3]], [collisionInfo[1][0], collisionInfo[1][1], collisionInfo[1][2], collisionInfo[1][3]]]
+			var overlap = collision.intersection(AABBs)
 
-			/*
+			// Crop the canvas...
+
 			var widthNeeded = Math.max(collisionInfo[0][0] + (collisionInfo[0][2] / 2), collisionInfo[1][0] + (collisionInfo[1][2] / 2))
 			var heightNeeded = Math.max(collisionInfo[0][1], collisionInfo[1][1]) + (Math.max(collisionInfo[0][3], collisionInfo[1][3]) / 2)
 			var cropX = Math.max(collisionInfo[0][0] - (collisionInfo[0][2] / 2), collisionInfo[1][0] - (collisionInfo[1][2] / 2))
@@ -150,45 +153,15 @@ collision = {
 			collisionInfo[0][1] = collisionInfo[0][1] - cropY
 			collisionInfo[1][0] = collisionInfo[1][0] - cropX
 			collisionInfo[1][1] = collisionInfo[1][1] - cropY
-			*/
-
-			// Only draw and check where the bounding boxes overlap...
 
 
-			var AABBs = [[collisionInfo[0][0], collisionInfo[0][1], collisionInfo[0][2], collisionInfo[0][3]], [collisionInfo[1][0], collisionInfo[1][1], collisionInfo[1][2], collisionInfo[1][3]]]
-			var overlap = collision.intersection(AABBs)
-			console.log(overlap)
-
-			var cropX = overlap[0] - 2
-			var cropY = overlap[1] - 2
-			var widthNeeded = overlap[2] + 2
-			var heightNeeded = overlap[3] + 2
-
-			// Work out where to draw the images...
-
-			collisionInfo[0][0] = collisionInfo[0][0] - cropX
-			collisionInfo[0][1] = collisionInfo[0][1] - cropY
-			collisionInfo[1][0] = collisionInfo[1][0] - cropX
-			collisionInfo[1][1] = collisionInfo[1][1] - cropY
-
-
-			// Old
-			/*
 			canvas.width = widthNeeded - cropX
 			canvas.height = heightNeeded - cropY
-			console.log(canvas.width, canvas.height)
 			ctx.clearRect(0, 0, canvas.width, canvas.height)
-			*/
 
-			// New
-
-			canvas.width = widthNeeded
-			canvas.height = heightNeeded
 			if (canvas.width < 1 || canvas.height < 1) {
 				return false // Otherwise there will be an error
 			}
-
-			ctx.clearRect(0, 0, canvas.width, canvas.height)
 
 
 			// Draw the two images
@@ -238,7 +211,10 @@ collision = {
 				ctx.drawImage(collision.scans[spr.key], x - (width / 2), y - (height / 2), width, height)
 			}
 
-			var data = ctx.getImageData(0, 0, canvas.width, canvas.height)
+			if (overlap[2] < 1 || overlap[3] < 1) { // Make sure the width and height aren't too small
+				return false
+			}
+			var data = ctx.getImageData(overlap[0], overlap[1], overlap[2], overlap[3]) // Only check the overlap.
 
 			var i = 3
 			while (i < data.data.length) {
