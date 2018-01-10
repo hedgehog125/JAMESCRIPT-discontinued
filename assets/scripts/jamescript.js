@@ -288,6 +288,7 @@ function testRenderers() {
 			if (testTick == 30) {
 				console.log("JAMESCRIPT: AUTO achieved " + avgFPS.value + " FPS.")
 				if (useCanvas) {
+					mode = Phaser.CANVAS
 					console.log("JAMESCRIPT: 'useCanvas' is true. Switching to canvas mode...")
 				}
 				else {
