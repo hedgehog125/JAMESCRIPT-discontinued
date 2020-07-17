@@ -1,4 +1,4 @@
-# JAMESCRIPT
+# JAMESCRIPT (discontinued)
 
 Update: this is an old project and my coding has since improved. I wouldn't recommend actually using this. However, I'm working on a non-phaser dependent framework called Bagel.js, which might work better for you.
 
